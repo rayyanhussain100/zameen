@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zameen}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zameen}
+      POSTGRES_DB: ${POSTGRES_DB:-zameen}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Runs once, only against an empty data directory (Postgres init
+      # convention) — creates the vector extension, listings table, and
+      # HNSW index.
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zameen} -d ${POSTGRES_DB:-zameen}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

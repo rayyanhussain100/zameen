@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zameen-agent"
+version = "0.1.0"
+description = "Scrapes Zameen.com property listings into Postgres+pgvector and answers questions over them via a Google ADK agent."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "google-adk>=0.1.0",
+    "google-genai>=0.3.0",
+    "httpx>=0.27",
+    "selectolax>=0.3.21",
+    "tenacity>=8.2",
+    "psycopg[binary]>=3.1",
+    "pgvector>=0.3.0",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+zameen-scrape = "zameen_agent.scraper.pipeline:main"
+zameen-agent = "zameen_agent.agent.run:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

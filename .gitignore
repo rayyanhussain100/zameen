@@ -1,0 +1,36 @@
+# Env / secrets
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Test / lint / type-check caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Postgres data volume (if bind-mounted locally instead of a named volume)
+pgdata/
+
+# Local scrape output / debug artifacts
+*.html.bak
+/tmp/
