@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import re
 
+import psycopg
+
 from zameen_agent.config import settings
 from zameen_agent.db import get_connection, sanitize_rows
 
@@ -54,7 +56,7 @@ def _validate_select_only(query: str) -> str:
     return body
 
 
-def sql_query(query: str) -> list[dict]:
+def sql_query(query: str) -> list[dict] | dict[str, str]:
     """Run a single read-only SELECT statement against the listings database.
 
     Use this for exact filters and aggregates over the `listings` table —
@@ -69,19 +71,30 @@ def sql_query(query: str) -> list[dict]:
     don't include one, capped at a configurable max (see
     ZAMEEN_SQL_TOOL_MAX_ROWS, default 200).
 
+    If the query is rejected by the guardrail, or Postgres rejects it (e.g. a
+    typo'd column name), this returns `{"error": "<message>"}` instead of
+    raising — so you can read the error and retry with a corrected query
+    rather than the whole conversation failing.
+
     Args:
         query: A single PostgreSQL SELECT statement against the `listings`
             table (see db/schema.sql for the full column list).
 
     Returns:
-        A list of result rows as dicts.
+        A list of result rows as dicts, or `{"error": "..."}` on failure.
     """
-    validated = _validate_select_only(query)
+    try:
+        validated = _validate_select_only(query)
+    except UnsafeQueryError as exc:
+        return {"error": str(exc)}
 
     if not _LIMIT_RE.search(validated):
         validated = f"{validated} LIMIT {settings.sql_tool_max_rows}"
 
-    with get_connection(read_only=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute(validated)
-            return sanitize_rows(cur.fetchall())
+    try:
+        with get_connection(read_only=True) as conn:
+            with conn.cursor() as cur:
+                cur.execute(validated)
+                return sanitize_rows(cur.fetchall())
+    except psycopg.Error as exc:
+        return {"error": str(exc).strip()}
