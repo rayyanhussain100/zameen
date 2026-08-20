@@ -5,12 +5,14 @@ Zameen.com property scraper + Q&A agent. Key conventions to keep in mind:
 - **src layout**: package code lives under `src/zameen_agent/` (`scraper/`,
   `tools/`, `agent/`). Import as `zameen_agent.*`, not relative to repo root.
 - **Storage is Postgres + pgvector**: `db/schema.sql` is the source of truth
-  for the data model. `listings.embedding` is `vector(768)` to match Google
-  `text-embedding-004`, indexed with `HNSW ... vector_cosine_ops`. Any query
-  or write against `embedding` must use the cosine operator (`<=>`) to
-  actually hit the index — don't switch to L2/inner-product without also
-  changing the index opclass. If you ever change embedding model/dimension,
-  the column and index both need migrating.
+  for the data model. `listings.embedding` is `vector(768)`, produced by
+  Google `gemini-embedding-001` (text-embedding-004's successor — retired
+  from the API) truncated to 768 dims via `output_dimensionality` (see
+  `embeddings.py`), indexed with `HNSW ... vector_cosine_ops`. Any query or
+  write against `embedding` must use the cosine operator (`<=>`) to actually
+  hit the index — don't switch to L2/inner-product without also changing the
+  index opclass. If you ever change embedding model/dimension, the column
+  and index both need migrating.
 - **Prices are PKR.** `price_pkr` is always the numeric PKR value; Pakistani
   units (Crore = 1e7, Lakh = 1e5) get parsed in `scraper/normalize.py` —
   don't re-implement ad hoc price parsing elsewhere. Every listing has a
@@ -22,11 +24,14 @@ Zameen.com property scraper + Q&A agent. Key conventions to keep in mind:
   with exponential backoff via `tenacity`. Don't add a second HTTP path that
   bypasses these. No headless browser, no third-party scraping service —
   `httpx` + `selectolax` only.
-- **`parser.py` CSS selectors are placeholders.** They're marked
-  `# TODO(selectors)` because they were written without inspecting a live
-  Zameen.com page. Don't guess real selectors from training data — inspect
-  the live DOM before replacing them. JSON-LD parsing is preferred when
-  present since it's less brittle than class-name selectors.
+- **`parser.py` selectors were read off a live page (2026-08-18), not
+  guessed.** Search-results pages carry no per-listing JSON-LD (only a
+  `BreadcrumbList`) — the CSS path, keyed off stable `aria-label` attributes
+  (not Zameen's hashed class names), is the primary path in practice. The
+  JSON-LD `@type` list is still a guess for listing *detail* pages (not yet
+  scraped) — see the `TODO(json-ld)` in `parser.py`. If Zameen's markup
+  changes, re-inspect a live page rather than guessing new selectors from
+  training data.
 - **`raw` JSONB always stores the full scraped record.** This lets
   `normalize.py` be re-run against existing rows without re-scraping —
   preserve this when touching the pipeline.

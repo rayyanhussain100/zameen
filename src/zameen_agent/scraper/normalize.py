@@ -27,8 +27,7 @@ _AREA_RE = re.compile(
     r"(\d+(?:\.\d+)?)\s*(marla|kanal|sq\.?\s*ft|square\s*feet|sq\.?\s*yd|square\s*yards?)",
     re.IGNORECASE,
 )
-_BEDS_RE = re.compile(r"(\d+)\s*bed", re.IGNORECASE)
-_BATHS_RE = re.compile(r"(\d+)\s*bath", re.IGNORECASE)
+_INT_RE = re.compile(r"\d+")
 
 _RENT_HINTS = ("/month", "per month", "monthly")
 
@@ -123,24 +122,36 @@ def infer_property_type(title: str | None) -> str | None:
     return None
 
 
-def _parse_int(pattern: re.Pattern, text: str | None) -> int | None:
+def _parse_int(text: str | None) -> int | None:
+    """Parse a plain integer field (e.g. card's Beds/Baths text, "6")."""
     if not text:
         return None
-    match = pattern.search(text)
-    return int(match.group(1)) if match else None
+    match = _INT_RE.search(text)
+    return int(match.group()) if match else None
 
 
-def normalise(raw: RawListing, *, purpose: str | None = None) -> dict[str, Any]:
+def normalise(
+    raw: RawListing,
+    *,
+    purpose: str | None = None,
+    property_type: str | None = None,
+    city: str | None = None,
+) -> dict[str, Any]:
     """Map a raw scraped listing dict (from parser.py) onto `listings` columns.
 
     `purpose` should be supplied by the caller when known (e.g. derived from
     which search URL was scraped — "Homes for Sale" vs "Homes for Rent");
-    falls back to a text heuristic otherwise.
+    falls back to a text heuristic otherwise. `property_type` similarly may
+    be supplied from the search URL's category (e.g. "Houses" -> "house");
+    falls back to a keyword heuristic over the title otherwise. `city` may be
+    supplied from the search URL (e.g. "Lahore-1-1.html" -> "Lahore").
+
+    `raw` is expected in the CSS-card shape from parser.py: beds_raw,
+    baths_raw, and area_raw are plain per-field strings (not a combined
+    "features" blob) — e.g. beds_raw="6", area_raw="10 Marla".
     """
     title = raw.get("title")
-    features_text = raw.get("features_raw") or ""
-
-    area = parse_area(raw.get("features_raw") or raw.get("area_raw"))
+    area = parse_area(raw.get("area_raw"))
 
     return {
         "source_url": raw["source_url"],
@@ -148,18 +159,22 @@ def normalise(raw: RawListing, *, purpose: str | None = None) -> dict[str, Any]:
         "title": title,
         "description": raw.get("description"),
         "purpose": infer_purpose(raw, default=purpose),
-        "property_type": raw.get("property_type") or infer_property_type(title),
-        "city": raw.get("city"),
+        "property_type": raw.get("property_type") or property_type or infer_property_type(title),
+        "city": raw.get("city") or city,
         "location": raw.get("location_raw"),
         "price_pkr": parse_price_pkr(raw.get("price_raw")),
         "price_raw": raw.get("price_raw"),
         "area_marla": area["area_marla"],
         "area_sqft": area["area_sqft"],
-        "area_raw": raw.get("area_raw") or raw.get("features_raw"),
-        "bedrooms": _parse_int(_BEDS_RE, features_text),
-        "bathrooms": _parse_int(_BATHS_RE, features_text),
+        "area_raw": raw.get("area_raw"),
+        "bedrooms": _parse_int(raw.get("beds_raw")),
+        "bathrooms": _parse_int(raw.get("baths_raw")),
         "agency": raw.get("agency"),
-        "posted_date": raw.get("posted_date"),
+        # Zameen's search-results cards only expose a relative "Added: N
+        # minutes/hours/days ago" string (see raw["posted_raw"]), not an
+        # absolute timestamp — left NULL here rather than guessed; the raw
+        # text is preserved in the `raw` JSONB column.
+        "posted_date": None,
         "latitude": raw.get("latitude"),
         "longitude": raw.get("longitude"),
         "raw": raw,

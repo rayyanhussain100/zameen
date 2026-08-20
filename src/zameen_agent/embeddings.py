@@ -1,8 +1,12 @@
-"""Embedding helper wrapping Google's text-embedding-004.
+"""Embedding helper wrapping Google's gemini-embedding-001.
 
-Produces 768-dim vectors to match the `vector(768)` column and HNSW
-(vector_cosine_ops) index in db/schema.sql. If you ever change embedding
-model/dimension, you must migrate the column and rebuild the index to match.
+text-embedding-004 (the model originally targeted) has been retired from the
+Gemini API — gemini-embedding-001 is its replacement and, via Matryoshka
+Representation Learning, supports truncating its native 3072-dim output down
+to 768 with `output_dimensionality`, so it still matches the `vector(768)`
+column and HNSW (vector_cosine_ops) index in db/schema.sql. If you ever
+change embedding model/dimension, you must migrate the column and rebuild
+the index to match.
 """
 
 from __future__ import annotations

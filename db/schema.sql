@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS listings (
     -- can be re-normalised later without re-scraping the page.
     raw             JSONB NOT NULL,
 
-    -- text-embedding-004 is 768-dim. Built from title + description + location.
+    -- gemini-embedding-001, truncated to 768 dims via output_dimensionality
+    -- (MRL) — see embeddings.py. Built from title + description + location.
     embedding       vector(768),
 
     scraped_at      TIMESTAMPTZ NOT NULL DEFAULT now(),

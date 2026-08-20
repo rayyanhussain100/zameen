@@ -9,7 +9,9 @@ search tool.
   third-party scraping API. Honors `robots.txt`, rate-limits with jitter,
   retries with exponential backoff.
 - **Storage**: PostgreSQL + pgvector, `listings` table, HNSW index over
-  768-dim embeddings (cosine distance) matching Google `text-embedding-004`.
+  768-dim embeddings (cosine distance) from Google `gemini-embedding-001`
+  (text-embedding-004's successor, truncated to 768 dims via
+  `output_dimensionality`).
 - **Agent**: Google ADK, picks between `sql_query` (exact filters/aggregates)
   and `semantic_search` (fuzzy/descriptive queries) per question. Prices are
   PKR; listings are `sale` or `rent`.
@@ -22,7 +24,7 @@ docker-compose.yml                  Local Postgres+pgvector
 src/zameen_agent/
   config.py                         Settings (env-driven)
   db.py                             psycopg connection helper (registers pgvector adapter)
-  embeddings.py                     text-embedding-004 wrapper
+  embeddings.py                     gemini-embedding-001 wrapper (truncated to 768 dims)
   scraper/
     client.py                       Polite httpx client (robots.txt, rate limit, retry/backoff)
     parser.py                       JSON-LD-first / CSS-fallback listing parser (TODOs — see below)
@@ -63,7 +65,7 @@ src/zameen_agent/
 3. **Google credentials**
 
    Set `GOOGLE_API_KEY` in `.env` (used for both the ADK agent's Gemini model
-   and `text-embedding-004`). Get a key at https://aistudio.google.com/apikey.
+   and `gemini-embedding-001`). Get a key at https://aistudio.google.com/apikey.
 
 ## Usage
 
