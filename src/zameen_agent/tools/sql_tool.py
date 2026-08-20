@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 
 from zameen_agent.config import settings
-from zameen_agent.db import get_connection
+from zameen_agent.db import get_connection, sanitize_rows
 
 _WRITE_KEYWORDS = (
     "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TRUNCATE",
@@ -84,4 +84,4 @@ def sql_query(query: str) -> list[dict]:
     with get_connection(read_only=True) as conn:
         with conn.cursor() as cur:
             cur.execute(validated)
-            return cur.fetchall()
+            return sanitize_rows(cur.fetchall())

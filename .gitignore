@@ -34,3 +34,6 @@ pgdata/
 # Local scrape output / debug artifacts
 *.html.bak
 /tmp/
+
+# ADK local session state (adk run / adk web)
+.adk/

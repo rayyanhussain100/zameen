@@ -4,7 +4,7 @@ closest listings by cosine distance over pgvector's HNSW index.
 
 from __future__ import annotations
 
-from zameen_agent.db import get_connection
+from zameen_agent.db import get_connection, sanitize_rows
 from zameen_agent.embeddings import embed_text
 
 _MAX_TOP_K = 50
@@ -67,4 +67,4 @@ def semantic_search(
                     "top_k": capped_top_k,
                 },
             )
-            return cur.fetchall()
+            return sanitize_rows(cur.fetchall())
