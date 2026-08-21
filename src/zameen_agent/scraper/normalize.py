@@ -12,6 +12,7 @@ from typing import Any
 
 from zameen_agent.scraper.parser import RawListing
 
+THOUSAND = 1_000
 CRORE = 10_000_000
 LAKH = 100_000
 ARAB = 1_000_000_000
@@ -22,7 +23,10 @@ ARAB = 1_000_000_000
 # in that unit.
 MARLA_PER_KANAL = 20
 
-_PRICE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(arab|crore|lakh|lac)?", re.IGNORECASE)
+# "Thousand" verified live on Zameen.com rent listings (e.g. "PKR 90
+# Thousand"/month) — rent prices are quoted far smaller than sale prices, so
+# Crore/Lakh alone under-covers them.
+_PRICE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(arab|crore|lakh|lac|thousand)?", re.IGNORECASE)
 _AREA_RE = re.compile(
     r"(\d+(?:\.\d+)?)\s*(marla|kanal|sq\.?\s*ft|square\s*feet|sq\.?\s*yd|square\s*yards?)",
     re.IGNORECASE,
@@ -51,10 +55,10 @@ _PROPERTY_TYPE_KEYWORDS = {
 
 
 def parse_price_pkr(raw: str | None) -> float | None:
-    """Parse a PKR price string, handling Crore/Lakh/Arab suffixes.
+    """Parse a PKR price string, handling Arab/Crore/Lakh/Thousand suffixes.
 
     Examples: "1.25 Crore" -> 12_500_000.0, "85 Lakh" -> 8_500_000.0,
-    "PKR 45,000" -> 45_000.0.
+    "90 Thousand" -> 90_000.0, "PKR 45,000" -> 45_000.0.
     """
     if not raw:
         return None
@@ -70,6 +74,8 @@ def parse_price_pkr(raw: str | None) -> float | None:
         return number * LAKH
     if unit == "arab":
         return number * ARAB
+    if unit == "thousand":
+        return number * THOUSAND
     return number
 
 
